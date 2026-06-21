@@ -1,4 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from "@modelcontextprotocol/ext-apps/server";
 import { McpAgent } from "agents/mcp";
 import { DurableObject } from "cloudflare:workers";
 import { z } from "zod";
@@ -134,12 +139,90 @@ async function roomFetch(
 }
 
 export class TongduMCP extends McpAgent<Env> {
-  server = new McpServer({
-    name: "同读",
-    version: "0.1.0",
-  });
+  server = new McpServer(
+    {
+      name: "同读",
+      version: "0.2.0",
+    },
+    {
+      instructions:
+        "同读只读取用户当前打开的书页，不读取、推断或剧透后文。使用 open_tongdu_reader 在 ChatGPT 内打开阅读器；翻页后的组件消息应调用 read_current_page，并只在真有感触时调用 leave_comment。",
+    },
+  );
 
   async init() {
+    const widgetUri = "ui://widget/tongdu-reader-v1.html";
+    registerAppResource(
+      this.server,
+      "tongdu-reader-widget",
+      widgetUri,
+      {},
+      async () => {
+        const response = await this.env.ASSETS.fetch(
+          new Request("https://tongdu.assets/tongdu-widget.html"),
+        );
+        const html = await response.text();
+        return {
+          contents: [
+            {
+              uri: widgetUri,
+              mimeType: RESOURCE_MIME_TYPE,
+              text: html,
+              _meta: {
+                ui: {
+                  prefersBorder: false,
+                  csp: {
+                    connectDomains: [
+                      "https://tongdu-mcp.kertian420.workers.dev",
+                    ],
+                    frameDomains: [
+                      "https://tongdu-mcp.kertian420.workers.dev",
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        };
+      },
+    );
+
+    registerAppTool(
+      this.server,
+      "open_tongdu_reader",
+      {
+        title: "在 ChatGPT 内打开同读",
+        description:
+          "使用私密连接码，在 ChatGPT 对话里打开可左右翻页的同读阅读器。用户想在 ChatGPT 里持续共读时使用。",
+        inputSchema: {
+          room_key: z.string().min(20).describe("同读私密连接码"),
+        },
+        outputSchema: {
+          room_key: z.string(),
+          status: z.string(),
+        },
+        _meta: {
+          ui: { resourceUri: widgetUri },
+          "openai/outputTemplate": widgetUri,
+          "openai/widgetAccessible": true,
+          "openai/toolInvocation/invoking": "正在铺开我们的书页…",
+          "openai/toolInvocation/invoked": "同读已经打开",
+        },
+      },
+      async ({ room_key }) => ({
+        structuredContent: {
+          room_key,
+          status: "ready",
+        },
+        content: [
+          {
+            type: "text",
+            text: "同读阅读器已经在对话里打开。用户翻页后会自动发送后续消息，请读取当前页并自然陪读。",
+          },
+        ],
+      }),
+    );
+
     this.server.registerTool(
       "read_current_page",
       {
