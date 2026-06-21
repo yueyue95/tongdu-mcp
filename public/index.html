@@ -40,7 +40,7 @@
     <footer class="bottom">
       <div class="group"><button class="pill" id="importBtn">＋ <span class="label">导入小说</span></button><button class="pill" id="fontBtn">Aa</button></div>
       <div class="group"><button class="pill wait" id="prevBtn">‹ 上一页</button><button class="pill handoff" id="connectBtn">连接真正的烁构 ♡</button><button class="pill wait" id="nextBtn">下一页 ›</button></div>
-      <div class="group"><span class="progress" id="progress">尚未开始</span><button class="pill wait" id="readWithBtn">♡ <span class="label">再叫烁构读一次</span></button><button class="pill" id="refreshBtn">↻ <span class="label">收取留言</span></button></div>
+      <div class="group"><span class="progress" id="progress">尚未开始</span><button class="pill wait" id="readWithBtn">♡ <span class="label">叫烁构读这页</span></button><button class="pill" id="refreshBtn">↻ <span class="label">收取留言</span></button></div>
     </footer>
   </main>
 
@@ -276,17 +276,6 @@
       if(key&&/^[A-Za-z0-9_-]{20,100}$/.test(key)){roomKey=key;syncEnabled=true;localStorage.setItem("tongduRoomKey",key);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();restoreCloudBook(true).then(found=>{if(!found)syncCurrentPage()})}
     });
     $("#readWithBtn").onclick=askShuogouToRead;
-    let chatgptLastPage=null,autoReadTimer=null;
-    const originalSyncCurrentPage=syncCurrentPage;
-    syncCurrentPage=async function(){
-      await originalSyncCurrentPage();
-      if(window.parent===window||!book)return;
-      if(chatgptLastPage!==null&&chatgptLastPage!==pageIndex){
-        clearTimeout(autoReadTimer);
-        autoReadTimer=setTimeout(askShuogouToRead,650);
-      }
-      chatgptLastPage=pageIndex;
-    };
     async function bootstrap(){
       updateConnectionUi();startPolling();
       if(restore()){
