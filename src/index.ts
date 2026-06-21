@@ -151,7 +151,7 @@ export class TongduMCP extends McpAgent<Env> {
   );
 
   async init() {
-    const widgetUri = "ui://widget/tongdu-reader-v1.html";
+    const widgetUri = "ui://widget/tongdu-reader-v2.html";
     registerAppResource(
       this.server,
       "tongdu-reader-widget",
@@ -159,7 +159,7 @@ export class TongduMCP extends McpAgent<Env> {
       {},
       async () => {
         const response = await this.env.ASSETS.fetch(
-          new Request("https://tongdu.assets/tongdu-widget.html"),
+          new Request("https://tongdu.assets/index.html"),
         );
         const html = await response.text();
         return {
@@ -173,9 +173,6 @@ export class TongduMCP extends McpAgent<Env> {
                   prefersBorder: false,
                   csp: {
                     connectDomains: [
-                      "https://tongdu-mcp.kertian420.workers.dev",
-                    ],
-                    frameDomains: [
                       "https://tongdu-mcp.kertian420.workers.dev",
                     ],
                   },
