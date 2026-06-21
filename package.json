@@ -9,6 +9,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.1.2",
     "agents": "^0.16.0",
     "zod": "^4.4.3"
   },
