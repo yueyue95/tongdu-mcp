@@ -1,24 +1,20 @@
 {
-	"name": "tongdu-mcp",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"format": "oxfmt --write .",
-		"lint:fix": "oxlint --fix",
-		"start": "wrangler dev",
-		"cf-typegen": "wrangler types",
-		"type-check": "tsc --noEmit"
-	},
-	"dependencies": {
-		"agents": "^0.16.0",
-		"zod": "^4.4.3"
-	},
-	"devDependencies": {
-		"oxfmt": "^0.54.0",
-		"oxlint": "^1.69.0",
-		"typescript": "6.0.3",
-		"wrangler": "^4.100.0"
-	}
+  "name": "tongdu-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "agents": "^0.16.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260621.0",
+    "typescript": "6.0.3",
+    "wrangler": "^4.100.0"
+  }
 }
