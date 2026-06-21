@@ -31,7 +31,7 @@
   <main class="app">
     <header class="top">
       <div class="brand"><button class="pill" id="libraryBtn">☰ 书架</button><b id="bookTitle">同读</b><small id="chapterLabel">我们的共读小窝</small></div>
-      <div class="live"><span class="dot"></span><span id="status">真实共读尚未连接</span></div>
+      <div class="live"><button class="pill" id="fullscreenBtn">⛶ 展开阅读</button><span class="dot"></span><span id="status">真实共读尚未连接</span></div>
     </header>
     <section class="reader" id="reader">
       <button class="edge prev" aria-label="上一页"></button><button class="edge next" aria-label="下一页"></button>
@@ -39,7 +39,7 @@
     </section>
     <footer class="bottom">
       <div class="group"><button class="pill" id="importBtn">＋ <span class="label">导入小说</span></button><button class="pill" id="fontBtn">Aa</button></div>
-      <button class="pill handoff" id="connectBtn">连接真正的烁构 ♡</button>
+      <div class="group"><button class="pill wait" id="prevBtn">‹ 上一页</button><button class="pill handoff" id="connectBtn">连接真正的烁构 ♡</button><button class="pill wait" id="nextBtn">下一页 ›</button></div>
       <div class="group"><span class="progress" id="progress">尚未开始</span><button class="pill" id="refreshBtn">↻ <span class="label">收取留言</span></button></div>
     </footer>
   </main>
@@ -220,6 +220,9 @@
     $("#fileInput").onchange=e=>importFile(e.target.files[0]);const drop=$("#drop");["dragenter","dragover"].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add("drag")}));["dragleave","drop"].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove("drag")}));drop.ondrop=e=>importFile(e.dataTransfer.files[0]);
     $("#pasteGo").onclick=()=>{const t=$("#pasteText").value.trim();if(!t)return toast("先粘贴一点小说正文呀");loadBook({title:$("#pasteTitle").value.trim()||"一起看的小说",text:t})};
     $(".edge.prev").onclick=()=>turn(-1);$(".edge.next").onclick=()=>turn(1);reader.ontouchstart=e=>touchX=e.changedTouches[0].clientX;reader.ontouchend=e=>{const d=e.changedTouches[0].clientX-touchX;if(Math.abs(d)>55)turn(d<0?1:-1)};
+    $("#prevBtn").onclick=()=>turn(-1);$("#nextBtn").onclick=()=>turn(1);
+    async function requestFullscreen(){if(window.openai?.requestDisplayMode){try{await window.openai.requestDisplayMode({mode:"fullscreen"})}catch(e){toast("请点组件右上角的展开按钮")}}}
+    $("#fullscreenBtn").onclick=requestFullscreen;
     $("#connectBtn").onclick=()=>{updateConnectionUi();open("connectModal")};
     $("#enableSyncBtn").onclick=()=>{roomKey=roomKey||makeRoomKey();syncEnabled=true;localStorage.setItem("tongduRoomKey",roomKey);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();startPolling();syncCurrentPage();toast("真实共读已开启")};
     $("#disableSyncBtn").onclick=()=>{syncEnabled=false;localStorage.setItem("tongduSyncEnabled","false");clearInterval(pollTimer);updateConnectionUi();toast("同步已关闭，小说继续留在本机")};
@@ -247,6 +250,7 @@
     const originalSyncCurrentPage=syncCurrentPage;
     syncCurrentPage=async function(){await originalSyncCurrentPage();if(window.parent!==window&&book){if(chatgptLastPage!==null&&chatgptLastPage!==pageIndex)askShuogouToRead();chatgptLastPage=pageIndex}};
     updateConnectionUi();startPolling();if(!restore()){loadBook(demo,0,false)}
+    if(window.openai){setTimeout(requestFullscreen,350);setTimeout(()=>window.openai?.notifyIntrinsicHeight?.(Math.min(window.innerHeight||760,900)),500)}
   </script>
 </body>
 </html>
