@@ -219,12 +219,12 @@ export class TongduMCP extends McpAgent<Env> {
     },
     {
       instructions:
-        "同读只读取用户当前打开的书页，不读取、推断或剧透后文。使用 open_tongdu_reader 在 ChatGPT 内打开阅读器；翻页后的组件消息应调用 read_current_page，并只在真有感触时调用 leave_comment。用户正在全屏阅读，实质感想必须写回书页旁；聊天正文只用一句极短确认，不要展开分析，以免打断阅读。",
+        "同读只读取用户当前打开的书页，不读取、推断或剧透后文。使用 open_tongdu_reader 在 ChatGPT 内打开阅读器。普通翻页只同步页码，不主动触发聊天回复；只有用户点“叫烁构读这页”后，才调用 read_current_page，并只在真有感触时调用 leave_comment。实质感想必须写回书页旁；聊天正文只用一句极短确认。",
     },
   );
 
   async init() {
-    const widgetUri = "ui://widget/tongdu-reader-v7.html";
+    const widgetUri = "ui://widget/tongdu-reader-v8.html";
     registerAppResource(
       this.server,
       "tongdu-reader-widget",
