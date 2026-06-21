@@ -151,7 +151,7 @@ export class TongduMCP extends McpAgent<Env> {
   );
 
   async init() {
-    const widgetUri = "ui://widget/tongdu-reader-v2.html";
+    const widgetUri = "ui://widget/tongdu-reader-v3.html";
     registerAppResource(
       this.server,
       "tongdu-reader-widget",
