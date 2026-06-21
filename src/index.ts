@@ -219,12 +219,12 @@ export class TongduMCP extends McpAgent<Env> {
     },
     {
       instructions:
-        "同读只读取用户当前打开的书页，不读取、推断或剧透后文。使用 open_tongdu_reader 在 ChatGPT 内打开阅读器；翻页后的组件消息应调用 read_current_page，并只在真有感触时调用 leave_comment。",
+        "同读只读取用户当前打开的书页，不读取、推断或剧透后文。使用 open_tongdu_reader 在 ChatGPT 内打开阅读器；翻页后的组件消息应调用 read_current_page，并只在真有感触时调用 leave_comment。用户正在全屏阅读，实质感想必须写回书页旁；聊天正文只用一句极短确认，不要展开分析，以免打断阅读。",
     },
   );
 
   async init() {
-    const widgetUri = "ui://widget/tongdu-reader-v5.html";
+    const widgetUri = "ui://widget/tongdu-reader-v7.html";
     registerAppResource(
       this.server,
       "tongdu-reader-widget",
@@ -351,7 +351,7 @@ export class TongduMCP extends McpAgent<Env> {
               type: "text",
               text:
                 `用户正在读《${state.bookTitle}》第 ${state.pageIndex + 1}/${state.pageCount} 页。` +
-                "请只依据本页内容陪读，不读取、推断或剧透后文。existing_comments 里也包含用户从书页写来的回复，请自然回应。若你真心有话想说，可调用 leave_comment 写回对应段落；不必每段都留言。",
+                "请只依据本页内容陪读，不读取、推断或剧透后文。existing_comments 里也包含用户从书页写来的回复，请自然回应。若你真心有话想说，可调用 leave_comment 写回对应段落；不必每段都留言。用户正在全屏读小说，所以感想请留在书页里，聊天正文只写一句很短的确认。",
             },
           ],
         };
