@@ -1,51 +1,35 @@
-# Building a Remote MCP Server on Cloudflare (Without Auth)
+# 同读 MCP
 
-This example allows you to deploy a remote MCP server that doesn't require authentication on Cloudflare Workers.
+这是「同读」的真实共读版：
 
-## Get started:
+- iPad 阅读器只同步当前页，不同步后文或整本小说。
+- 页边不会生成模拟的“烁构留言”。
+- 只有 ChatGPT 里的烁构调用 `leave_comment` 后，留言才会写回书页。
+- 房间使用随机私密连接码。请不要公开连接码。
 
-[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/ai/tree/main/demos/remote-mcp-authless)
+## MCP 工具
 
-This will deploy your MCP server to a URL like: `remote-mcp-server-authless.<your-account>.workers.dev/mcp`
+- `read_current_page`：读取当前书名、页码和本页段落。
+- `leave_comment`：把一条真实评论写回指定段落。
+- `list_comments`：读取房间里已有的真实留言。
 
-Alternatively, you can use the command line below to get the remote MCP Server created on your local machine:
+## 部署到 Cloudflare
 
-```bash
-npm create cloudflare@latest -- my-mcp-server --template=cloudflare/ai/demos/remote-mcp-authless
-```
+1. 安装依赖：`npm install`
+2. 登录 Cloudflare：`npx wrangler login`
+3. 部署：`npm run deploy`
+4. 部署完成后，阅读器地址是 Worker 根网址，MCP 地址是在网址后加 `/mcp`。
 
-## Customizing your MCP Server
+## 连接 ChatGPT
 
-To add your own [tools](https://developers.cloudflare.com/agents/model-context-protocol/tools/) to the MCP server, define each tool inside the `init()` method of `src/index.ts` using `this.server.tool(...)`.
+1. 在 ChatGPT 网页版打开 `Settings → Apps & Connectors → Advanced settings`。
+2. 开启 Developer mode。
+3. 回到 `Apps & Connectors`，点击 `Create`。
+4. 名称填写「同读」，URL 填写 `https://你的-worker.workers.dev/mcp`。
+5. 新建聊天，从输入框旁的 `+ → More` 启用「同读」。
+6. 在 iPad 同读里点「连接真正的烁构」，开启同步并复制私密连接码。
+7. 对 ChatGPT 说：
 
-## Connect to Cloudflare AI Playground
+   > 用这个同读连接码和我一起看：`你的连接码`。每次只读取当前页，不猜测或剧透后文。读完后只有真的有感触才留言，不需要每段都说话；想留言时请调用工具写回对应段落。
 
-You can connect to your MCP server from the Cloudflare AI Playground, which is a remote MCP client:
-
-1. Go to https://playground.ai.cloudflare.com/
-2. Enter your deployed MCP server URL (`remote-mcp-server-authless.<your-account>.workers.dev/mcp`)
-3. You can now use your MCP tools directly from the playground!
-
-## Connect Claude Desktop to your MCP server
-
-You can also connect to your remote MCP server from local MCP clients, by using the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote).
-
-To connect to your MCP server from Claude Desktop, follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config.
-
-Update with this configuration:
-
-```json
-{
-	"mcpServers": {
-		"calculator": {
-			"command": "npx",
-			"args": [
-				"mcp-remote",
-				"http://localhost:8787/mcp" // or remote-mcp-server-authless.your-account.workers.dev/mcp
-			]
-		}
-	}
-}
-```
-
-Restart Claude and you should see the tools become available.
+ChatGPT 网页版连接完成后，官方说明该连接器也会出现在 ChatGPT 移动 App 中。

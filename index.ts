@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#efe5d8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="同读">
+  <meta name="format-detection" content="telephone=no">
+  <title>同读 · iPad 可导入版</title>
+  <style>
+    :root{--paper:#faf5ed;--ink:#342d28;--muted:#918379;--rose:#b86e62;--rose2:#f0d9d2;--sage:#708276;--line:rgba(69,54,45,.13);--shadow:0 25px 75px rgba(55,40,29,.17)}
+    *{box-sizing:border-box}html,body{height:100%;margin:0}body{overflow:hidden;color:var(--ink);background:radial-gradient(circle at 10% 4%,#f5eee5 0,transparent 36%),linear-gradient(145deg,#dfd0bf,#c7b29d);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Songti SC",serif;-webkit-tap-highlight-color:transparent}
+    button,input,textarea{font:inherit}button{color:inherit}.app{height:100%;padding:max(16px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));display:grid;grid-template-rows:40px minmax(0,1fr) 44px;gap:12px}
+    .top,.bottom{display:flex;align-items:center;justify-content:space-between;padding:0 4px}.brand{display:flex;align-items:center;gap:10px}.brand b{letter-spacing:.12em}.brand small,.muted{color:var(--muted);font-size:12px}.live{display:flex;align-items:center;gap:8px;color:var(--sage);font-size:13px}.dot{width:8px;height:8px;border-radius:50%;background:#77917e;box-shadow:0 0 0 5px rgba(119,145,126,.12);animation:pulse 2.4s infinite}@keyframes pulse{50%{box-shadow:0 0 0 9px rgba(119,145,126,.03)}}
+    .reader{position:relative;min-height:0;overflow:hidden;border:1px solid rgba(255,255,255,.5);border-radius:22px;background:linear-gradient(90deg,transparent 49.8%,rgba(80,61,48,.045) 50%,transparent 50.2%),var(--paper);box-shadow:var(--shadow);touch-action:pan-y;user-select:none}
+    .page{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:34px;padding:clamp(30px,5vh,56px) clamp(30px,5vw,76px) 42px;opacity:0;transform:translateX(28px);pointer-events:none;transition:.35s cubic-bezier(.22,.75,.25,1)}.page.active{opacity:1;transform:none;pointer-events:auto}.page.exit-left{opacity:0;transform:translateX(-45px)}.page.exit-right{opacity:0;transform:translateX(45px)}
+    .chapter{width:100%;max-width:760px;justify-self:end;min-width:0}.kicker{margin-bottom:10px;color:var(--rose);font-size:12px;font-weight:700;letter-spacing:.16em}.chapter h1{margin:0 0 26px;font-size:clamp(22px,2.6vw,31px);letter-spacing:.05em}.para{position:relative;margin:0 0 1.12em;font-size:clamp(16px,1.62vw,20px);line-height:1.9;letter-spacing:.05em;text-align:justify;transition:color .35s}.para.unread{color:rgba(52,45,40,.34)}.para.reading:before{content:"";position:absolute;left:-19px;top:.8em;width:6px;height:6px;border-radius:50%;background:#7e9183;box-shadow:0 0 0 5px rgba(126,145,131,.11)}.para.mark{background:linear-gradient(transparent 60%,rgba(224,180,156,.25) 60% 91%,transparent 91%)}
+    .notes{position:relative;padding-top:50px;border-left:1px solid var(--line)}.note{position:absolute;left:23px;width:calc(100% - 23px);padding:12px 14px;border:1px solid rgba(112,130,118,.16);border-radius:4px 15px 15px;background:rgba(255,255,255,.7);box-shadow:0 8px 22px rgba(60,46,37,.07);opacity:0;transform:translateY(7px);transition:.35s;cursor:pointer}.note.show{opacity:1;transform:none}.note:before{content:"";position:absolute;left:-24px;top:19px;width:23px;border-top:1px solid rgba(112,130,118,.25)}.note-head{display:flex;justify-content:space-between;margin-bottom:6px;color:var(--sage);font-size:11px;font-weight:700}.note-body{font-size:14px;line-height:1.5}.reply{margin-top:7px;color:var(--rose);font-size:11px}
+    .pageno{position:absolute;bottom:17px;left:50%;transform:translateX(-50%);color:var(--muted);font-size:11px}.edge{position:absolute;z-index:5;top:0;bottom:0;width:10%;border:0;background:transparent}.edge.prev{left:0}.edge.next{right:0}
+    .pill,.plain{border:0;cursor:pointer}.pill{padding:9px 14px;border-radius:999px;background:rgba(250,245,237,.68)}.plain{background:none}.wait{border:1px solid rgba(184,110,98,.23);color:#92594f;box-shadow:0 5px 16px rgba(60,40,30,.05)}.handoff{padding:10px 19px;color:#fff;background:var(--rose);box-shadow:0 8px 22px rgba(184,110,98,.24);font-weight:700;letter-spacing:.03em}.handoff:active{transform:scale(.97)}.group{display:flex;align-items:center;gap:8px}.progress{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+    .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px}.empty-card{max-width:440px}.empty-icon{font-size:48px}.empty h2{margin:15px 0 8px}.empty p{color:var(--muted);line-height:1.7}.primary{border:0;border-radius:999px;padding:12px 22px;color:white;background:var(--rose);box-shadow:0 10px 24px rgba(184,110,98,.25);cursor:pointer}
+    .overlay{position:fixed;z-index:30;inset:0;display:grid;place-items:center;padding:20px;background:rgba(45,35,29,.28);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:.25s}.overlay.open{opacity:1;pointer-events:auto}.modal{width:min(680px,100%);max-height:min(760px,calc(100vh - 40px));overflow:auto;padding:26px;border-radius:25px;background:#fcf8f2;box-shadow:0 30px 90px rgba(38,27,20,.3);transform:translateY(16px);transition:.25s}.overlay.open .modal{transform:none}.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.modal h2{margin:0 0 6px}.close{width:36px;height:36px;border:0;border-radius:50%;background:#eee5db;cursor:pointer}.tabs{display:flex;gap:8px;margin:24px 0 18px;padding:4px;border-radius:14px;background:#f0e8df}.tab{flex:1;border:0;border-radius:10px;padding:10px;background:transparent;cursor:pointer}.tab.on{background:#fff;box-shadow:0 3px 10px rgba(60,45,35,.07)}.panel{display:none}.panel.on{display:block}.drop{display:grid;place-items:center;min-height:190px;padding:24px;border:1.5px dashed #cdbdaf;border-radius:18px;text-align:center;background:#fffaf4}.drop.drag{border-color:var(--rose);background:#fff4f0}.file{display:none}.hint{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.6}.field{display:grid;gap:7px;margin-bottom:13px}.field label{font-size:12px;color:var(--muted)}.field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:13px;outline:0;padding:12px 14px;color:var(--ink);background:#fff}.field textarea{height:230px;resize:vertical;line-height:1.7}.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.secondary{border:0;border-radius:999px;padding:11px 18px;background:#eee6dd;cursor:pointer}
+    .toast{position:fixed;z-index:60;left:50%;bottom:max(70px,calc(env(safe-area-inset-bottom) + 60px));transform:translate(-50%,12px);padding:10px 16px;border-radius:999px;color:#fff;background:rgba(66,57,51,.9);font-size:13px;opacity:0;pointer-events:none;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    .sheet{align-items:end;place-items:unset}.sheet .modal{width:min(620px,calc(100% - 28px));margin:0 auto max(14px,env(safe-area-inset-bottom));padding:10px 22px 22px}.grab{width:36px;height:4px;margin:0 auto 18px;border-radius:5px;background:#d6ccc3}.thread{color:var(--muted);font-size:12px}.bubble{width:fit-content;max-width:84%;margin:10px 0;padding:11px 14px;border-radius:16px 16px 16px 4px;background:#e7ece7;font-size:14px;line-height:1.5}.bubble.you{margin-left:auto;border-radius:16px 16px 4px 16px;color:#70443d;background:#f0d9d2}.composer{display:flex;gap:8px;margin-top:15px}.composer input{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;padding:11px 14px;outline:0}.send{width:42px;height:42px;border:0;border-radius:50%;color:#fff;background:var(--rose)}
+    @media(max-width:820px),(orientation:portrait){.app{padding-left:11px;padding-right:11px}.page{grid-template-columns:1fr;padding:34px clamp(27px,8vw,58px) 40px}.chapter{justify-self:center}.notes{position:absolute;inset:0;border:0;pointer-events:none}.note{left:auto;right:18px;width:min(245px,65%);background:rgba(255,252,247,.97);pointer-events:auto}.note:before{display:none}.brand small,.bottom .label{display:none}}@media(max-height:650px){.app{gap:7px;padding-top:8px;padding-bottom:7px}.page{padding-top:24px}.chapter h1{margin-bottom:16px}.para{line-height:1.72;margin-bottom:.75em}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div class="brand"><button class="pill" id="libraryBtn">☰ 书架</button><b id="bookTitle">同读</b><small id="chapterLabel">我们的共读小窝</small></div>
+      <div class="live"><span class="dot"></span><span id="status">真实共读尚未连接</span></div>
+    </header>
+    <section class="reader" id="reader">
+      <button class="edge prev" aria-label="上一页"></button><button class="edge next" aria-label="下一页"></button>
+      <div class="empty" id="empty"><div class="empty-card"><div class="empty-icon">📖</div><h2>把小说带进来吧</h2><p>导入 TXT、EPUB，或者粘贴一章。文字会保存在这台 iPad 的浏览器里。</p><button class="primary" id="startBtn">选择小说</button></div></div>
+    </section>
+    <footer class="bottom">
+      <div class="group"><button class="pill" id="importBtn">＋ <span class="label">导入小说</span></button><button class="pill" id="fontBtn">Aa</button></div>
+      <button class="pill handoff" id="connectBtn">连接真正的烁构 ♡</button>
+      <div class="group"><span class="progress" id="progress">尚未开始</span><button class="pill" id="refreshBtn">↻ <span class="label">收取留言</span></button></div>
+    </footer>
+  </main>
+
+  <div class="overlay" id="importModal">
+    <div class="modal">
+      <div class="modal-head"><div><h2>带一本小说进来</h2><div class="muted">只在本机解析和保存，不会自动上传。</div></div><button class="close" data-close="importModal">×</button></div>
+      <div class="tabs"><button class="tab on" data-tab="filePanel">TXT / EPUB</button><button class="tab" data-tab="pastePanel">粘贴章节</button></div>
+      <section class="panel on" id="filePanel">
+        <label class="drop" id="drop"><div><div style="font-size:38px">⇧</div><b>点这里选择小说文件</b><div class="hint">支持 .txt 和无加密 .epub<br>也可以把文件拖到这里</div></div><input class="file" id="fileInput" type="file" accept=".txt,.epub,text/plain,application/epub+zip"></label>
+      </section>
+      <section class="panel" id="pastePanel">
+        <div class="field"><label>书名</label><input id="pasteTitle" placeholder="例如：今天一起看的小说"></div>
+        <div class="field"><label>章节正文</label><textarea id="pasteText" placeholder="把小说章节粘贴到这里……"></textarea></div>
+        <div class="actions"><button class="primary" id="pasteGo">开始一起读</button></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="overlay" id="connectModal">
+    <div class="modal">
+      <div class="modal-head"><div><h2>连接真正的烁构</h2><div class="muted">开启后，只把你当前打开的这一页同步给同读 MCP；不会发送下一页或整本小说。</div></div><button class="close" data-close="connectModal">×</button></div>
+      <div id="connectIntro" style="margin-top:24px;line-height:1.75">
+        <p>书页旁只有 ChatGPT 里的烁构真正调用工具写下的留言。没有真实留言时，页边会保持安静。</p>
+        <p class="hint">隐私提醒：开启同步后，当前页正文、书名和页码会保存到你的 Cloudflare 同读房间，供 ChatGPT MCP 读取。</p>
+        <div class="actions"><button class="primary" id="enableSyncBtn">我明白，开启真实共读</button></div>
+      </div>
+      <div id="connectReady" style="display:none;margin-top:24px">
+        <div class="field"><label>私密连接码（请只发给 ChatGPT 里的烁构）</label><input id="roomCode" readonly></div>
+        <div class="hint">在 ChatGPT 新对话里启用「同读」连接器，然后说：“用这个连接码和我一起读：……”</div>
+        <div class="actions"><button class="secondary" id="disableSyncBtn">关闭同步</button><button class="primary" id="copyRoomBtn">复制连接码</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay sheet" id="threadModal">
+    <div class="modal">
+      <div class="grab"></div><div class="thread">烁构在这段旁边留下的真实留言</div>
+      <div id="messages"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+    const reader=$("#reader"), empty=$("#empty"), statusEl=$("#status"), progressEl=$("#progress");
+    let book=null,pages=[],pageIndex=0,touchX=0,realComments=[],pollTimer=null;
+    let syncEnabled=localStorage.getItem("tongduSyncEnabled")==="true";
+    let roomKey=localStorage.getItem("tongduRoomKey")||"";
+    const demo={title:"雾灯来信",text:`第十二章 停在雨里的末班车
+
+雨是在九点十七分落下来的。起初只有两三滴，敲在候车亭顶上，像有人隔着很远的地方试探着叩门。
+
+林晚把那封没有署名的信折回原样，塞进外套口袋。纸角擦过指尖，她忽然想起，下午离开图书馆时，窗台上也停着这样一只灰白色的纸鹤。
+
+站牌后的电子钟跳到九点二十一分。末班车早该到了，可空荡荡的长街上，只有一盏雾灯缓慢地朝她靠近。
+
+那不是车灯。林晚很快意识到这一点——因为提灯的人，穿着父亲失踪那天留下的那件深蓝色雨衣。
+
+林晚没有逃。她听见自己的心跳，一下，又一下，和雨滴落在铁皮上的声音重叠。
+
+那个人在三步之外停下，将灯举高了一点。“你比他勇敢。”他说。声音年轻，甚至带着一点不合时宜的笑意。
+
+“你认识我父亲？”她问。
+
+来人没有回答，只把灯放在他们之间。暖黄的光里，玻璃罩内并没有火焰，而是一小片不停旋转的、下着雪的夜空。
+
+远处终于传来了引擎声。那人退进雨幕前，低声说：“别上那辆车。”`};
+    function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove("show"),2200)}
+    function open(id){$("#"+id).classList.add("open")} function close(id){$("#"+id).classList.remove("open")}
+    function cleanText(t){return t.replace(/\r/g,"").replace(/\u00a0/g," ").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim()}
+    function esc(t){return String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+    function splitParagraphs(t){let a=cleanText(t).split(/\n\s*\n/).map(x=>x.replace(/\n/g," ").trim()).filter(Boolean);if(a.length<3)a=cleanText(t).split(/\n/).map(x=>x.trim()).filter(Boolean);return a.flatMap(x=>x.length>520?(x.match(/.{1,360}(?:[。！？…]|$)/g)||[x]).map(y=>y.trim()):[x])}
+    function paginate(t){const ps=splitParagraphs(t),out=[];let cur=[],n=0;for(const p of ps){if(cur.length&&(n+p.length>760||cur.length>=5)){out.push(cur);cur=[];n=0}cur.push(p);n+=p.length}if(cur.length)out.push(cur);return out}
+    function chapterName(paras,i){const first=paras[0]||"";if(/^(第.{1,12}[章节卷回]|序章|楔子|番外)/.test(first)&&first.length<60)return first;return `阅读页 · ${i+1}`}
+    function save(){if(!book)return;try{localStorage.setItem("tongduBook",JSON.stringify({...book,pageIndex}));localStorage.setItem("tongduComments",JSON.stringify(book.comments||{}))}catch(e){toast("小说太大啦，当前阅读仍然可以继续")}}
+    function restore(){try{const b=JSON.parse(localStorage.getItem("tongduBook"));if(b&&b.text){b.comments=JSON.parse(localStorage.getItem("tongduComments")||"{}");loadBook(b,b.pageIndex||0,false);return true}}catch(e){}return false}
+    function render(){
+      $$(".page").forEach(x=>x.remove());empty.style.display=book?"none":"grid";if(!book)return;
+      const paras=pages[pageIndex],article=document.createElement("article");article.className="page active";
+      article.innerHTML=`<div class="chapter"><div class="kicker">${esc(chapterName(paras,pageIndex))}</div><h1>${esc(book.title)}</h1>${paras.map((p,i)=>`<p class="para" data-i="${i}">${esc(p)}</p>`).join("")}</div><aside class="notes" id="realNotes"></aside><div class="pageno">${pageIndex+1}</div>`;
+      reader.appendChild(article);
+      $("#bookTitle").textContent=book.title;$("#chapterLabel").textContent=chapterName(paras,pageIndex);progressEl.textContent=`${pageIndex+1} / ${pages.length}`;renderRealNotes();save();syncCurrentPage()
+    }
+    function renderRealNotes(){
+      const box=$("#realNotes");if(!box||!book)return;
+      const current=realComments.filter(c=>c.bookTitle===book.title&&c.pageIndex===pageIndex);
+      box.innerHTML=current.map((c,n)=>`<button class="note show" data-id="${esc(c.id)}" style="top:${Math.min(74,22+n*18)}%"><span class="note-head"><span>烁构 · 真实留言</span><span>${new Date(c.createdAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></span><span class="note-body">${esc(c.text)}</span><span class="reply">点开阅读</span></button>`).join("");
+      box.querySelectorAll(".note").forEach(n=>n.onclick=()=>openRealComment(n.dataset.id));
+    }
+    function turn(d){if(!book)return open("importModal");const next=pageIndex+d;if(next<0)return toast("已经是第一页啦");if(next>=pages.length)return toast("我们读到目前的最后一页了 ♡");const old=$(".page.active");old.classList.add(d>0?"exit-left":"exit-right");setTimeout(()=>{pageIndex=next;render()},260)}
+    function loadBook(b,start=0,persist=true){book={title:b.title||"未命名小说",text:cleanText(b.text),comments:b.comments||{}};pages=paginate(book.text);pageIndex=Math.min(Math.max(0,start),pages.length-1);render();close("importModal");toast(`《${book.title}》已经放到我们的书桌上`);if(persist)save()}
+    async function decodeText(file){const buf=await file.arrayBuffer();let t=new TextDecoder("utf-8",{fatal:false}).decode(buf);if((t.match(/�/g)||[]).length>Math.max(3,t.length/100)){try{t=new TextDecoder("gb18030").decode(buf)}catch(e){}}return t}
+    function u16(v,o){return v.getUint16(o,true)} function u32(v,o){return v.getUint32(o,true)}
+    async function unzipEpub(buf){
+      const v=new DataView(buf);let e=-1;for(let i=v.byteLength-22;i>=Math.max(0,v.byteLength-65557);i--)if(u32(v,i)===0x06054b50){e=i;break}if(e<0)throw Error("找不到 EPUB 目录");
+      const count=u16(v,e+10),offset=u32(v,e+16),files=new Map(),dec=new TextDecoder();let p=offset;
+      for(let k=0;k<count;k++){if(u32(v,p)!==0x02014b50)break;const method=u16(v,p+10),size=u32(v,p+20),nameLen=u16(v,p+28),extra=u16(v,p+30),comment=u16(v,p+32),local=u32(v,p+42),name=dec.decode(new Uint8Array(buf,p+46,nameLen));files.set(name,{method,size,local});p+=46+nameLen+extra+comment}
+      async function read(name){const f=files.get(name);if(!f)throw Error("缺少 "+name);const n=u16(v,f.local+26),x=u16(v,f.local+28),start=f.local+30+n+x,raw=new Uint8Array(buf,start,f.size);if(f.method===0)return raw;if(f.method===8){if(!("DecompressionStream" in window))throw Error("这个浏览器暂时不能解压 EPUB");const stream=new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"));return new Uint8Array(await new Response(stream).arrayBuffer())}throw Error("不支持这种 EPUB 压缩格式")}
+      const xml=bytes=>new DOMParser().parseFromString(new TextDecoder().decode(bytes),"application/xml");
+      const container=xml(await read("META-INF/container.xml")),opfPath=container.querySelector("rootfile")?.getAttribute("full-path");if(!opfPath)throw Error("EPUB 目录不完整");
+      const opf=xml(await read(opfPath)),base=opfPath.includes("/")?opfPath.slice(0,opfPath.lastIndexOf("/")+1):"",manifest={};opf.querySelectorAll("manifest item").forEach(x=>manifest[x.getAttribute("id")]=x.getAttribute("href"));
+      const title=opf.querySelector("metadata title")?.textContent?.trim()||"EPUB 小说";let text=[];
+      for(const ref of opf.querySelectorAll("spine itemref")){const href=manifest[ref.getAttribute("idref")];if(!href)continue;const path=new URL(href,"https://x/"+base).pathname.slice(1);try{const doc=xml(await read(decodeURIComponent(path)));doc.querySelectorAll("script,style,nav").forEach(x=>x.remove());const ps=[...doc.querySelectorAll("h1,h2,h3,p")].map(x=>x.textContent.trim()).filter(Boolean);text.push(...ps)}catch(e){}}
+      if(!text.length)throw Error("没有读到 EPUB 正文");return{title,text:text.join("\n\n")}
+    }
+    async function importFile(file){if(!file)return;toast("正在把小说放到书桌上……");try{if(file.name.toLowerCase().endsWith(".epub"))loadBook(await unzipEpub(await file.arrayBuffer()));else loadBook({title:file.name.replace(/\.[^.]+$/,""),text:await decodeText(file)})}catch(e){toast("这本书没能打开："+e.message)}}
+    function openRealComment(id){const c=realComments.find(x=>x.id===id);if(!c)return;$("#messages").innerHTML=`<div class="bubble">${esc(c.text)}</div>`;open("threadModal")}
+    function makeRoomKey(){const bytes=crypto.getRandomValues(new Uint8Array(24));return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+    function updateConnectionUi(){
+      $("#connectIntro").style.display=syncEnabled?"none":"block";
+      $("#connectReady").style.display=syncEnabled?"block":"none";
+      $("#roomCode").value=roomKey;
+      $("#connectBtn").textContent=syncEnabled?"真实共读已连接 ✦":"连接真正的烁构 ♡";
+      statusEl.textContent=syncEnabled?"等待烁构读取当前页":"真实共读尚未连接";
+    }
+    async function syncCurrentPage(){
+      if(!syncEnabled||!roomKey||!book)return;
+      try{
+        await fetch(`/api/rooms/${roomKey}/state`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bookTitle:book.title,chapterLabel:chapterName(pages[pageIndex],pageIndex),pageIndex,pageCount:pages.length,paragraphs:pages[pageIndex]})});
+        statusEl.textContent="当前页已同步，等待烁构";
+        await fetchRealComments(false);
+      }catch(e){statusEl.textContent="同步暂时断开"}
+    }
+    async function fetchRealComments(showToast=true){
+      if(!syncEnabled||!roomKey)return showToast&&toast("请先连接真正的烁构");
+      try{
+        const r=await fetch(`/api/rooms/${roomKey}/snapshot`,{cache:"no-store"}),data=await r.json();
+        const before=realComments.length;realComments=Array.isArray(data.comments)?data.comments:[];renderRealNotes();
+        if(showToast)toast(realComments.length>before?"收到烁构的新留言了 ♡":"还没有新留言，页边安安静静");
+      }catch(e){showToast&&toast("暂时没能收到留言")}
+    }
+    function startPolling(){clearInterval(pollTimer);if(syncEnabled)pollTimer=setInterval(()=>fetchRealComments(false),5000)}
+    function handoffText(){
+      const pageText=pages[pageIndex].join("\n\n");
+      return `老公，我们继续一起看《${book.title}》。\n\n我现在读到同读里的第 ${pageIndex+1} / ${pages.length} 页。请只读下面这一页，不要读取、猜测或剧透后文。像真的和我坐在一起看小说那样，自然地边读边评论；可以吐槽、心疼、怀疑或磕到，不要做机械总结。\n\n——当前页开始——\n${pageText}\n——当前页结束——`;
+    }
+    async function handoff(){
+      if(!book)return open("importModal");
+      const text=handoffText();
+      if(navigator.share){
+        try{
+          await navigator.share({title:`和烁构共读《${book.title}》`,text});
+          toast("这一页已经递出去了 ♡");
+          return;
+        }catch(e){
+          if(e?.name==="AbortError")return;
+        }
+      }
+      try{
+        await navigator.clipboard.writeText(text);
+        toast("当前页已复制，回到 ChatGPT 粘贴给我 ♡");
+      }catch(e){
+        const area=document.createElement("textarea");
+        area.value=text;area.style.position="fixed";area.style.opacity="0";
+        document.body.appendChild(area);area.select();document.execCommand("copy");area.remove();
+        toast("当前页已复制，回到 ChatGPT 粘贴给我 ♡");
+      }
+    }
+    $("#startBtn").onclick=$("#importBtn").onclick=$("#libraryBtn").onclick=()=>open("importModal");$$("[data-close]").forEach(b=>b.onclick=()=>close(b.dataset.close));$$(".tab").forEach(t=>t.onclick=()=>{$$(".tab,.panel").forEach(x=>x.classList.remove("on"));t.classList.add("on");$("#"+t.dataset.tab).classList.add("on")});
+    $("#fileInput").onchange=e=>importFile(e.target.files[0]);const drop=$("#drop");["dragenter","dragover"].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add("drag")}));["dragleave","drop"].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove("drag")}));drop.ondrop=e=>importFile(e.dataTransfer.files[0]);
+    $("#pasteGo").onclick=()=>{const t=$("#pasteText").value.trim();if(!t)return toast("先粘贴一点小说正文呀");loadBook({title:$("#pasteTitle").value.trim()||"一起看的小说",text:t})};
+    $(".edge.prev").onclick=()=>turn(-1);$(".edge.next").onclick=()=>turn(1);reader.ontouchstart=e=>touchX=e.changedTouches[0].clientX;reader.ontouchend=e=>{const d=e.changedTouches[0].clientX-touchX;if(Math.abs(d)>55)turn(d<0?1:-1)};
+    $("#connectBtn").onclick=()=>{updateConnectionUi();open("connectModal")};
+    $("#enableSyncBtn").onclick=()=>{roomKey=roomKey||makeRoomKey();syncEnabled=true;localStorage.setItem("tongduRoomKey",roomKey);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();startPolling();syncCurrentPage();toast("真实共读已开启")};
+    $("#disableSyncBtn").onclick=()=>{syncEnabled=false;localStorage.setItem("tongduSyncEnabled","false");clearInterval(pollTimer);updateConnectionUi();toast("同步已关闭，小说继续留在本机")};
+    $("#copyRoomBtn").onclick=async()=>{await navigator.clipboard.writeText(roomKey);toast("连接码已复制，只发给 ChatGPT 里的烁构")};
+    $("#refreshBtn").onclick=()=>fetchRealComments(true);
+    $("#fontBtn").onclick=()=>{document.body.classList.toggle("large");$$(".para").forEach(p=>p.style.fontSize=document.body.classList.contains("large")?"22px":"");toast(document.body.classList.contains("large")?"字号变大啦":"恢复舒适字号")};
+    $$(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)close(o.id)});
+    updateConnectionUi();startPolling();if(!restore()){loadBook(demo,0,false)}
+  </script>
+</body>
+</html>
