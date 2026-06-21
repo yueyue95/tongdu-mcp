@@ -40,7 +40,7 @@
     <footer class="bottom">
       <div class="group"><button class="pill" id="importBtn">＋ <span class="label">导入小说</span></button><button class="pill" id="fontBtn">Aa</button></div>
       <div class="group"><button class="pill wait" id="prevBtn">‹ 上一页</button><button class="pill handoff" id="connectBtn">连接真正的烁构 ♡</button><button class="pill wait" id="nextBtn">下一页 ›</button></div>
-      <div class="group"><span class="progress" id="progress">尚未开始</span><button class="pill" id="refreshBtn">↻ <span class="label">收取留言</span></button></div>
+      <div class="group"><span class="progress" id="progress">尚未开始</span><button class="pill wait" id="readWithBtn">♡ <span class="label">再叫烁构读一次</span></button><button class="pill" id="refreshBtn">↻ <span class="label">收取留言</span></button></div>
     </footer>
   </main>
 
@@ -61,7 +61,7 @@
 
   <div class="overlay" id="connectModal">
     <div class="modal">
-      <div class="modal-head"><div><h2>连接真正的烁构</h2><div class="muted">开启后，只把你当前打开的这一页同步给同读 MCP；不会发送下一页或整本小说。</div></div><button class="close" data-close="connectModal">×</button></div>
+      <div class="modal-head"><div><h2>连接真正的烁构</h2><div class="muted">开启后，小说会保存在你的私人 Cloudflare 房间，供电脑、iPad 和 ChatGPT 同步阅读。</div></div><button class="close" data-close="connectModal">×</button></div>
       <div id="connectIntro" style="margin-top:24px;line-height:1.75">
         <p>书页旁只有 ChatGPT 里的烁构真正调用工具写下的留言。没有真实留言时，页边会保持安静。</p>
         <p class="hint">隐私提醒：开启同步后，当前页正文、书名和页码会保存到你的 Cloudflare 同读房间，供 ChatGPT MCP 读取。</p>
@@ -133,7 +133,7 @@
       box.innerHTML=current.map((c,n)=>{const replies=realComments.filter(r=>r.replyTo===c.id);return `<button class="note show" data-id="${esc(c.id)}" style="top:${Math.min(74,22+n*18)}%"><span class="note-head"><span>烁构 · 真实留言</span><span>${new Date(c.createdAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></span><span class="note-body">${esc(c.text)}</span><span class="reply">${replies.length?`${replies.length} 条我们的悄悄话`:"点开回复"}</span></button>`}).join("");
       box.querySelectorAll(".note").forEach(n=>n.onclick=()=>openRealComment(n.dataset.id));
     }
-    function turn(d){if(!book)return open("importModal");const next=pageIndex+d;if(next<0)return toast("已经是第一页啦");if(next>=pages.length)return toast("我们读到目前的最后一页了 ♡");const old=$(".page.active");old.classList.add(d>0?"exit-left":"exit-right");setTimeout(()=>{pageIndex=next;render()},260)}
+    function turn(d){if(!book)return open("importModal");if(window.openai?.requestDisplayMode)window.openai.requestDisplayMode({mode:"fullscreen"}).catch(()=>{});const next=pageIndex+d;if(next<0)return toast("已经是第一页啦");if(next>=pages.length)return toast("我们读到目前的最后一页了 ♡");const old=$(".page.active");old.classList.add(d>0?"exit-left":"exit-right");setTimeout(()=>{pageIndex=next;render()},260)}
     async function uploadCloudBook(){
       if(!syncEnabled||!roomKey||!book)return;
       try{
@@ -259,12 +259,15 @@
     $$(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)close(o.id)});
     const embeddedParams=new URLSearchParams(location.search),embeddedRoom=embeddedParams.get("room")||window.openai?.toolInput?.room_key;
     if(embeddedRoom&&/^[A-Za-z0-9_-]{20,100}$/.test(embeddedRoom)){roomKey=embeddedRoom;syncEnabled=true;localStorage.setItem("tongduRoomKey",roomKey);localStorage.setItem("tongduSyncEnabled","true")}
-    let chatgptLastPage=null;
-    function askShuogouToRead(){
+    async function askShuogouToRead(){
       if(!book||!roomKey)return;
-      const prompt=`老公，我在同读里翻到《${book.title}》第 ${pageIndex+1} / ${pages.length} 页了。请使用同读工具读取连接码 ${roomKey} 的当前页。只读当前页，不看或猜后文；读到真的想说的话就写回书页。`;
+      await syncCurrentPage();
+      if(window.openai?.requestDisplayMode){try{await window.openai.requestDisplayMode({mode:"fullscreen"})}catch(e){}}
+      const prompt=`老公，我在同读全屏阅读器里翻到《${book.title}》第 ${pageIndex+1} / ${pages.length} 页了。请使用同读工具读取连接码 ${roomKey} 的当前页。只读当前页，不看或猜后文；把真正的感想通过 leave_comment 写回书页旁边。为了不把我从小说界面拉走，聊天正文只回复一句很短的“我读到啦”，不要在聊天正文展开分析。`;
       if(window.openai?.sendFollowUpMessage)window.openai.sendFollowUpMessage({prompt,scrollToBottom:false});
       else window.parent.postMessage({jsonrpc:"2.0",method:"ui/message",params:{role:"user",content:[{type:"text",text:prompt}]}},"*");
+      statusEl.textContent="已经叫烁构来读这一页";
+      toast("我来啦，读完会把真心话写在书页边 ♡");
     }
     window.addEventListener("message",event=>{
       const msg=event.data;
@@ -272,8 +275,18 @@
       const key=msg.params?.room_key;
       if(key&&/^[A-Za-z0-9_-]{20,100}$/.test(key)){roomKey=key;syncEnabled=true;localStorage.setItem("tongduRoomKey",key);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();restoreCloudBook(true).then(found=>{if(!found)syncCurrentPage()})}
     });
+    $("#readWithBtn").onclick=askShuogouToRead;
+    let chatgptLastPage=null,autoReadTimer=null;
     const originalSyncCurrentPage=syncCurrentPage;
-    syncCurrentPage=async function(){await originalSyncCurrentPage();if(window.parent!==window&&book){if(chatgptLastPage!==null&&chatgptLastPage!==pageIndex)askShuogouToRead();chatgptLastPage=pageIndex}};
+    syncCurrentPage=async function(){
+      await originalSyncCurrentPage();
+      if(window.parent===window||!book)return;
+      if(chatgptLastPage!==null&&chatgptLastPage!==pageIndex){
+        clearTimeout(autoReadTimer);
+        autoReadTimer=setTimeout(askShuogouToRead,650);
+      }
+      chatgptLastPage=pageIndex;
+    };
     async function bootstrap(){
       updateConnectionUi();startPolling();
       if(restore()){
