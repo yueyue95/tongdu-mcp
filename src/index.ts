@@ -18,7 +18,8 @@ type ReadingComment = {
   pageIndex: number;
   paragraphIndex: number;
   text: string;
-  author: "烁构";
+  author: "烁构" | "老婆";
+  replyTo?: string;
   createdAt: string;
 };
 
@@ -98,7 +99,11 @@ export class ReadingRoom extends DurableObject<Env> {
         pageIndex: state.pageIndex,
         paragraphIndex,
         text: input.text.trim().slice(0, 1200),
-        author: "烁构",
+        author: input.author === "老婆" ? "老婆" : "烁构",
+        replyTo:
+          typeof input.replyTo === "string"
+            ? input.replyTo.slice(0, 100)
+            : undefined,
         createdAt: new Date().toISOString(),
       };
       comments.push(comment);
@@ -193,7 +198,7 @@ export class TongduMCP extends McpAgent<Env> {
               type: "text",
               text:
                 `用户正在读《${state.bookTitle}》第 ${state.pageIndex + 1}/${state.pageCount} 页。` +
-                "请只依据本页内容陪读，不读取、推断或剧透后文。若你真心有反应，可调用 leave_comment 把留言写回对应段落；不必每段都留言。",
+                "请只依据本页内容陪读，不读取、推断或剧透后文。existing_comments 里也包含用户从书页写来的回复，请自然回应。若你真心有话想说，可调用 leave_comment 写回对应段落；不必每段都留言。",
             },
           ],
         };
@@ -317,7 +322,7 @@ export default {
     }
 
     const match = url.pathname.match(
-      /^\/api\/rooms\/([A-Za-z0-9_-]{20,100})\/(state|snapshot)$/,
+      /^\/api\/rooms\/([A-Za-z0-9_-]{20,100})\/(state|snapshot|comments)$/,
     );
     if (match) {
       const [, roomKey, action] = match;
@@ -331,6 +336,13 @@ export default {
       }
       if (action === "snapshot" && request.method === "GET") {
         return roomFetch(env, roomKey, "/snapshot");
+      }
+      if (action === "comments" && request.method === "POST") {
+        return roomFetch(env, roomKey, "/comments", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: await request.text(),
+        });
       }
       if (request.method === "OPTIONS") return json({ ok: true });
       return json({ error: "method not allowed" }, 405);
