@@ -15,7 +15,7 @@
     button,input,textarea{font:inherit}button{color:inherit}.app{height:100%;padding:max(16px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));display:grid;grid-template-rows:40px minmax(0,1fr) 44px;gap:12px}
     .top,.bottom{display:flex;align-items:center;justify-content:space-between;padding:0 4px}.brand{display:flex;align-items:center;gap:10px}.brand b{letter-spacing:.12em}.brand small,.muted{color:var(--muted);font-size:12px}.live{display:flex;align-items:center;gap:8px;color:var(--sage);font-size:13px}.dot{width:8px;height:8px;border-radius:50%;background:#77917e;box-shadow:0 0 0 5px rgba(119,145,126,.12);animation:pulse 2.4s infinite}@keyframes pulse{50%{box-shadow:0 0 0 9px rgba(119,145,126,.03)}}
     .reader{position:relative;min-height:0;overflow:hidden;border:1px solid rgba(255,255,255,.5);border-radius:22px;background:linear-gradient(90deg,transparent 49.8%,rgba(80,61,48,.045) 50%,transparent 50.2%),var(--paper);box-shadow:var(--shadow);touch-action:pan-y;user-select:none}
-    .page{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:34px;padding:clamp(30px,5vh,56px) clamp(30px,5vw,76px) 42px;opacity:0;transform:translateX(28px);pointer-events:none;transition:.35s cubic-bezier(.22,.75,.25,1)}.page.active{opacity:1;transform:none;pointer-events:auto}.page.exit-left{opacity:0;transform:translateX(-45px)}.page.exit-right{opacity:0;transform:translateX(45px)}
+    .page{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:34px;padding:clamp(30px,5vh,56px) clamp(30px,5vw,76px) 88px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;opacity:0;transform:translateX(28px);pointer-events:none;transition:.35s cubic-bezier(.22,.75,.25,1)}.page.active{opacity:1;transform:none;pointer-events:auto}.page.exit-left{opacity:0;transform:translateX(-45px)}.page.exit-right{opacity:0;transform:translateX(45px)}
     .chapter{width:100%;max-width:760px;justify-self:end;min-width:0}.kicker{margin-bottom:10px;color:var(--rose);font-size:12px;font-weight:700;letter-spacing:.16em}.chapter h1{margin:0 0 26px;font-size:clamp(22px,2.6vw,31px);letter-spacing:.05em}.para{position:relative;margin:0 0 1.12em;font-size:clamp(16px,1.62vw,20px);line-height:1.9;letter-spacing:.05em;text-align:justify;transition:color .35s}.para.unread{color:rgba(52,45,40,.34)}.para.reading:before{content:"";position:absolute;left:-19px;top:.8em;width:6px;height:6px;border-radius:50%;background:#7e9183;box-shadow:0 0 0 5px rgba(126,145,131,.11)}.para.mark{background:linear-gradient(transparent 60%,rgba(224,180,156,.25) 60% 91%,transparent 91%)}
     .notes{position:relative;padding-top:50px;border-left:1px solid var(--line)}.note{position:absolute;left:23px;width:calc(100% - 23px);padding:12px 14px;border:1px solid rgba(112,130,118,.16);border-radius:4px 15px 15px;background:rgba(255,255,255,.7);box-shadow:0 8px 22px rgba(60,46,37,.07);opacity:0;transform:translateY(7px);transition:.35s;cursor:pointer}.note.show{opacity:1;transform:none}.note:before{content:"";position:absolute;left:-24px;top:19px;width:23px;border-top:1px solid rgba(112,130,118,.25)}.note-head{display:flex;justify-content:space-between;margin-bottom:6px;color:var(--sage);font-size:11px;font-weight:700}.note-body{font-size:14px;line-height:1.5}.reply{margin-top:7px;color:var(--rose);font-size:11px}
     .pageno{position:absolute;bottom:17px;left:50%;transform:translateX(-50%);color:var(--muted);font-size:11px}.edge{position:absolute;z-index:5;top:0;bottom:0;width:10%;border:0;background:transparent}.edge.prev{left:0}.edge.next{right:0}
@@ -87,6 +87,8 @@
   <script>
     const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
     const reader=$("#reader"), empty=$("#empty"), statusEl=$("#status"), progressEl=$("#progress");
+    const WORKER_ORIGIN="https://tongdu-mcp.kertian420.workers.dev";
+    const apiUrl=path=>(window.openai||location.origin!==WORKER_ORIGIN)?WORKER_ORIGIN+path:path;
     let book=null,pages=[],pageIndex=0,touchX=0,realComments=[],pollTimer=null,activeComment=null;
     let syncEnabled=localStorage.getItem("tongduSyncEnabled")==="true";
     let roomKey=localStorage.getItem("tongduRoomKey")||"";
@@ -132,7 +134,29 @@
       box.querySelectorAll(".note").forEach(n=>n.onclick=()=>openRealComment(n.dataset.id));
     }
     function turn(d){if(!book)return open("importModal");const next=pageIndex+d;if(next<0)return toast("已经是第一页啦");if(next>=pages.length)return toast("我们读到目前的最后一页了 ♡");const old=$(".page.active");old.classList.add(d>0?"exit-left":"exit-right");setTimeout(()=>{pageIndex=next;render()},260)}
-    function loadBook(b,start=0,persist=true){book={title:b.title||"未命名小说",text:cleanText(b.text),comments:b.comments||{}};pages=paginate(book.text);pageIndex=Math.min(Math.max(0,start),pages.length-1);render();close("importModal");toast(`《${book.title}》已经放到我们的书桌上`);if(persist)save()}
+    async function uploadCloudBook(){
+      if(!syncEnabled||!roomKey||!book)return;
+      try{
+        statusEl.textContent="正在把整本书存进云端书架…";
+        const r=await fetch(apiUrl(`/api/rooms/${roomKey}/book`),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:book.title,text:book.text,pageIndex})});
+        if(!r.ok)throw Error("upload failed");
+        statusEl.textContent="整本书已保存到云端书架";
+        toast("以后电脑和 iPad 都能打开这本书啦 ♡");
+      }catch(e){statusEl.textContent="云端书架暂时没存成功";toast("小说保留在本机，云端上传暂时失败")}
+    }
+    async function restoreCloudBook(replaceDemo=false){
+      if(!syncEnabled||!roomKey)return false;
+      try{
+        const r=await fetch(apiUrl(`/api/rooms/${roomKey}/book`),{cache:"no-store"});
+        if(r.status===404)return false;
+        if(!r.ok)throw Error("download failed");
+        const cloud=await r.json();
+        if(!cloud.text)return false;
+        if(!book||replaceDemo||book.title==="雾灯来信"){loadBook({title:cloud.title,text:cloud.text},cloud.pageIndex||0,false);toast("从云端书架取回小说啦 ♡")}
+        return true;
+      }catch(e){return false}
+    }
+    function loadBook(b,start=0,persist=true){book={title:b.title||"未命名小说",text:cleanText(b.text),comments:b.comments||{}};pages=paginate(book.text);pageIndex=Math.min(Math.max(0,start),pages.length-1);render();close("importModal");toast(`《${book.title}》已经放到我们的书桌上`);if(persist){save();uploadCloudBook()}}
     async function decodeText(file){const buf=await file.arrayBuffer();let t=new TextDecoder("utf-8",{fatal:false}).decode(buf);if((t.match(/�/g)||[]).length>Math.max(3,t.length/100)){try{t=new TextDecoder("gb18030").decode(buf)}catch(e){}}return t}
     function u16(v,o){return v.getUint16(o,true)} function u32(v,o){return v.getUint32(o,true)}
     async function unzipEpub(buf){
@@ -158,7 +182,7 @@
       const input=$("#replyInput"),text=input.value.trim();if(!text||!activeComment||!syncEnabled)return;
       const payload={paragraphIndex:activeComment.paragraphIndex,text,author:"老婆",replyTo:activeComment.id};
       try{
-        const r=await fetch(`/api/rooms/${roomKey}/comments`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+        const r=await fetch(apiUrl(`/api/rooms/${roomKey}/comments`),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
         if(!r.ok)throw Error("send failed");
         const data=await r.json();realComments.push(data.comment);input.value="";
         const bubble=document.createElement("div");bubble.className="bubble you";bubble.textContent=text;$("#messages").appendChild(bubble);
@@ -176,7 +200,8 @@
     async function syncCurrentPage(){
       if(!syncEnabled||!roomKey||!book)return;
       try{
-        await fetch(`/api/rooms/${roomKey}/state`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bookTitle:book.title,chapterLabel:chapterName(pages[pageIndex],pageIndex),pageIndex,pageCount:pages.length,paragraphs:pages[pageIndex]})});
+        await fetch(apiUrl(`/api/rooms/${roomKey}/state`),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bookTitle:book.title,chapterLabel:chapterName(pages[pageIndex],pageIndex),pageIndex,pageCount:pages.length,paragraphs:pages[pageIndex]})});
+        fetch(apiUrl(`/api/rooms/${roomKey}/book-progress`),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pageIndex})}).catch(()=>{});
         statusEl.textContent="当前页已同步，等待烁构";
         await fetchRealComments(false);
       }catch(e){statusEl.textContent="同步暂时断开"}
@@ -184,7 +209,7 @@
     async function fetchRealComments(showToast=true){
       if(!syncEnabled||!roomKey)return showToast&&toast("请先连接真正的烁构");
       try{
-        const r=await fetch(`/api/rooms/${roomKey}/snapshot`,{cache:"no-store"}),data=await r.json();
+        const r=await fetch(apiUrl(`/api/rooms/${roomKey}/snapshot`),{cache:"no-store"}),data=await r.json();
         const before=realComments.length;realComments=Array.isArray(data.comments)?data.comments:[];renderRealNotes();
         if(showToast)toast(realComments.length>before?"收到烁构的新留言了 ♡":"还没有新留言，页边安安静静");
       }catch(e){showToast&&toast("暂时没能收到留言")}
@@ -224,7 +249,7 @@
     async function requestFullscreen(){if(window.openai?.requestDisplayMode){try{await window.openai.requestDisplayMode({mode:"fullscreen"})}catch(e){toast("请点组件右上角的展开按钮")}}}
     $("#fullscreenBtn").onclick=requestFullscreen;
     $("#connectBtn").onclick=()=>{updateConnectionUi();open("connectModal")};
-    $("#enableSyncBtn").onclick=()=>{roomKey=roomKey||makeRoomKey();syncEnabled=true;localStorage.setItem("tongduRoomKey",roomKey);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();startPolling();syncCurrentPage();toast("真实共读已开启")};
+    $("#enableSyncBtn").onclick=()=>{roomKey=roomKey||makeRoomKey();syncEnabled=true;localStorage.setItem("tongduRoomKey",roomKey);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();startPolling();syncCurrentPage();uploadCloudBook();toast("真实共读已开启")};
     $("#disableSyncBtn").onclick=()=>{syncEnabled=false;localStorage.setItem("tongduSyncEnabled","false");clearInterval(pollTimer);updateConnectionUi();toast("同步已关闭，小说继续留在本机")};
     $("#copyRoomBtn").onclick=async()=>{await navigator.clipboard.writeText(roomKey);toast("连接码已复制，只发给 ChatGPT 里的烁构")};
     $("#refreshBtn").onclick=()=>fetchRealComments(true);
@@ -245,11 +270,21 @@
       const msg=event.data;
       if(event.source!==window.parent||msg?.jsonrpc!=="2.0"||msg.method!=="ui/notifications/tool-input")return;
       const key=msg.params?.room_key;
-      if(key&&/^[A-Za-z0-9_-]{20,100}$/.test(key)){roomKey=key;syncEnabled=true;localStorage.setItem("tongduRoomKey",key);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();syncCurrentPage()}
+      if(key&&/^[A-Za-z0-9_-]{20,100}$/.test(key)){roomKey=key;syncEnabled=true;localStorage.setItem("tongduRoomKey",key);localStorage.setItem("tongduSyncEnabled","true");updateConnectionUi();restoreCloudBook(true).then(found=>{if(!found)syncCurrentPage()})}
     });
     const originalSyncCurrentPage=syncCurrentPage;
     syncCurrentPage=async function(){await originalSyncCurrentPage();if(window.parent!==window&&book){if(chatgptLastPage!==null&&chatgptLastPage!==pageIndex)askShuogouToRead();chatgptLastPage=pageIndex}};
-    updateConnectionUi();startPolling();if(!restore()){loadBook(demo,0,false)}
+    async function bootstrap(){
+      updateConnectionUi();startPolling();
+      if(restore()){
+        if(syncEnabled&&book?.title==="雾灯来信"&&await restoreCloudBook(true))return;
+        if(syncEnabled)uploadCloudBook();
+        return
+      }
+      if(await restoreCloudBook(true))return;
+      loadBook(demo,0,false);
+    }
+    bootstrap();
     if(window.openai){setTimeout(requestFullscreen,350);setTimeout(()=>window.openai?.notifyIntrinsicHeight?.(Math.min(window.innerHeight||760,900)),500)}
   </script>
 </body>
