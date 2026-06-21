@@ -229,6 +229,11 @@
     $("#replyInput").onkeydown=e=>{if(e.key==="Enter")sendReply()};
     $("#fontBtn").onclick=()=>{document.body.classList.toggle("large");$$(".para").forEach(p=>p.style.fontSize=document.body.classList.contains("large")?"22px":"");toast(document.body.classList.contains("large")?"字号变大啦":"恢复舒适字号")};
     $$(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)close(o.id)});
+    const embeddedParams=new URLSearchParams(location.search),embeddedRoom=embeddedParams.get("room");
+    if(embeddedRoom&&/^[A-Za-z0-9_-]{20,100}$/.test(embeddedRoom)){roomKey=embeddedRoom;syncEnabled=true;localStorage.setItem("tongduRoomKey",roomKey);localStorage.setItem("tongduSyncEnabled","true")}
+    window.addEventListener("tongdu-page-rendered",()=>{});
+    const originalSyncCurrentPage=syncCurrentPage;
+    syncCurrentPage=async function(){await originalSyncCurrentPage();if(window.parent!==window&&book){window.parent.postMessage({type:"tongdu-page-changed",page:pageIndex+1,total:pages.length,bookTitle:book.title,roomKey},"*")}};
     updateConnectionUi();startPolling();if(!restore()){loadBook(demo,0,false)}
   </script>
 </body>

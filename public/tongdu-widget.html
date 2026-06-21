@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#f4ede4;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+    .shell{height:min(76vh,760px);min-height:520px;display:grid;grid-template-rows:44px 1fr;overflow:hidden;border-radius:18px;background:#f8f2ea;border:1px solid rgba(85,62,48,.12)}
+    header{display:flex;align-items:center;justify-content:space-between;padding:0 14px;color:#6d5c51;font-size:13px}
+    .status{display:flex;align-items:center;gap:7px}.dot{width:8px;height:8px;border-radius:50%;background:#7d927f;box-shadow:0 0 0 4px rgba(125,146,127,.12)}
+    button{border:0;border-radius:999px;padding:7px 12px;color:#8b5148;background:#ecd8d1;cursor:pointer}
+    iframe{width:100%;height:100%;border:0;background:#f8f2ea}
+    .empty{display:grid;place-items:center;padding:32px;text-align:center;color:#75665c}.empty b{display:block;margin-bottom:8px;color:#3d342e;font-size:18px}
+    @media(max-width:600px){.shell{height:72vh;min-height:480px;border-radius:12px}header{padding:0 10px}.hint{display:none}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <span class="status"><span class="dot"></span><span id="status">正在连接同读……</span></span>
+      <button id="call">叫烁构读这一页 ♡</button>
+    </header>
+    <div class="empty" id="empty"><div><b>正在铺开我们的书页</b>请稍等一下。</div></div>
+    <iframe id="reader" title="同读阅读器" hidden></iframe>
+  </div>
+  <script type="module">
+    const WORKER="https://tongdu-mcp.kertian420.workers.dev";
+    const status=document.querySelector("#status"),reader=document.querySelector("#reader"),empty=document.querySelector("#empty");
+    let roomKey="",lastPage=0,lastTotal=0,lastBook="",ready=false;
+    function promptForPage(){
+      if(!roomKey)return;
+      const text=`老公，我在同读里翻到《${lastBook||"我们的小说"}》第 ${lastPage||"当前"} / ${lastTotal||"?"} 页了。请使用同读工具读取这个连接码的当前页：${roomKey}。只读当前页，不看或猜后文；读到真的想说的话就写回书页。`;
+      if(window.openai?.sendFollowUpMessage)return window.openai.sendFollowUpMessage({prompt:text,scrollToBottom:false});
+      window.parent.postMessage({jsonrpc:"2.0",method:"ui/message",params:{role:"user",content:[{type:"text",text}]}},"*");
+    }
+    function mount(input){
+      const key=input?.room_key;
+      if(!key||!/^[A-Za-z0-9_-]{20,100}$/.test(key))return;
+      if(ready&&key===roomKey)return;
+      roomKey=key;ready=true;
+      reader.src=`${WORKER}/?embedded=1&room=${encodeURIComponent(roomKey)}`;
+      reader.hidden=false;empty.hidden=true;status.textContent="同读已经在 ChatGPT 里打开";
+    }
+    mount(window.openai?.toolInput);
+    window.addEventListener("message",event=>{
+      const msg=event.data;
+      if(event.source===reader.contentWindow&&msg?.type==="tongdu-page-changed"){
+        const changed=lastPage&&lastPage!==msg.page;
+        lastPage=msg.page;lastTotal=msg.total;lastBook=msg.bookTitle||lastBook;
+        status.textContent=`第 ${lastPage} / ${lastTotal} 页 · 已同步`;
+        if(changed)promptForPage();
+        return;
+      }
+      if(event.source!==window.parent||!msg||msg.jsonrpc!=="2.0")return;
+      if(msg.method==="ui/notifications/tool-input")mount(msg.params);
+    });
+    document.querySelector("#call").addEventListener("click",promptForPage);
+  </script>
+</body>
+</html>
