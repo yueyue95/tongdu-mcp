@@ -33,6 +33,14 @@ type RoomSnapshot = {
   comments: ReadingComment[];
 };
 
+type CloudBookMeta = {
+  title: string;
+  chunkCount: number;
+  length: number;
+  savedPageIndex: number;
+  updatedAt: string;
+};
+
 interface Env {
   MCP_OBJECT: DurableObjectNamespace<TongduMCP>;
   READING_ROOM: DurableObjectNamespace<ReadingRoom>;
@@ -116,6 +124,71 @@ export class ReadingRoom extends DurableObject<Env> {
       return json({ ok: true, comment });
     }
 
+    if (url.pathname === "/book" && request.method === "POST") {
+      const input = (await request.json()) as {
+        title?: unknown;
+        text?: unknown;
+        pageIndex?: unknown;
+      };
+      if (
+        typeof input.title !== "string" ||
+        typeof input.text !== "string" ||
+        !input.text.trim()
+      ) {
+        return json({ error: "invalid book" }, 400);
+      }
+      const oldMeta = await this.ctx.storage.get<CloudBookMeta>("book:meta");
+      const chunkSize = 48_000;
+      const chunks: string[] = [];
+      for (let i = 0; i < input.text.length; i += chunkSize) {
+        chunks.push(input.text.slice(i, i + chunkSize));
+      }
+      const writes: Record<string, string | CloudBookMeta> = {};
+      chunks.forEach((chunk, index) => {
+        writes[`book:chunk:${index}`] = chunk;
+      });
+      const meta: CloudBookMeta = {
+        title: input.title.slice(0, 200),
+        chunkCount: chunks.length,
+        length: input.text.length,
+        savedPageIndex: Math.max(0, Number(input.pageIndex) || 0),
+        updatedAt: new Date().toISOString(),
+      };
+      writes["book:meta"] = meta;
+      await this.ctx.storage.put(writes);
+      if (oldMeta && oldMeta.chunkCount > chunks.length) {
+        await this.ctx.storage.delete(
+          Array.from(
+            { length: oldMeta.chunkCount - chunks.length },
+            (_, index) => `book:chunk:${chunks.length + index}`,
+          ),
+        );
+      }
+      return json({ ok: true, meta });
+    }
+
+    if (url.pathname === "/book" && request.method === "GET") {
+      const meta = await this.ctx.storage.get<CloudBookMeta>("book:meta");
+      if (!meta) return json({ error: "book not found" }, 404);
+      const keys = Array.from(
+        { length: meta.chunkCount },
+        (_, index) => `book:chunk:${index}`,
+      );
+      const stored = await this.ctx.storage.get<string>(keys);
+      const text = keys.map((key) => stored.get(key) || "").join("");
+      return json({ title: meta.title, text, pageIndex: meta.savedPageIndex, meta });
+    }
+
+    if (url.pathname === "/book-progress" && request.method === "POST") {
+      const input = (await request.json()) as { pageIndex?: unknown };
+      const meta = await this.ctx.storage.get<CloudBookMeta>("book:meta");
+      if (!meta) return json({ error: "book not found" }, 404);
+      meta.savedPageIndex = Math.max(0, Number(input.pageIndex) || 0);
+      meta.updatedAt = new Date().toISOString();
+      await this.ctx.storage.put("book:meta", meta);
+      return json({ ok: true, pageIndex: meta.savedPageIndex });
+    }
+
     return json({ error: "not found" }, 404);
   }
 
@@ -151,7 +224,7 @@ export class TongduMCP extends McpAgent<Env> {
   );
 
   async init() {
-    const widgetUri = "ui://widget/tongdu-reader-v4.html";
+    const widgetUri = "ui://widget/tongdu-reader-v5.html";
     registerAppResource(
       this.server,
       "tongdu-reader-widget",
@@ -402,7 +475,7 @@ export default {
     }
 
     const match = url.pathname.match(
-      /^\/api\/rooms\/([A-Za-z0-9_-]{20,100})\/(state|snapshot|comments)$/,
+      /^\/api\/rooms\/([A-Za-z0-9_-]{20,100})\/(state|snapshot|comments|book|book-progress)$/,
     );
     if (match) {
       const [, roomKey, action] = match;
@@ -419,6 +492,20 @@ export default {
       }
       if (action === "comments" && request.method === "POST") {
         return roomFetch(env, roomKey, "/comments", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: await request.text(),
+        });
+      }
+      if (action === "book" && ["GET", "POST"].includes(request.method)) {
+        return roomFetch(env, roomKey, "/book", {
+          method: request.method,
+          headers: { "content-type": "application/json" },
+          body: request.method === "POST" ? await request.text() : undefined,
+        });
+      }
+      if (action === "book-progress" && request.method === "POST") {
+        return roomFetch(env, roomKey, "/book-progress", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: await request.text(),
