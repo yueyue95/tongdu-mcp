@@ -259,10 +259,10 @@
     $$(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)close(o.id)});
     const embeddedParams=new URLSearchParams(location.search),embeddedRoom=embeddedParams.get("room")||window.openai?.toolInput?.room_key;
     if(embeddedRoom&&/^[A-Za-z0-9_-]{20,100}$/.test(embeddedRoom)){roomKey=embeddedRoom;syncEnabled=true;localStorage.setItem("tongduRoomKey",roomKey);localStorage.setItem("tongduSyncEnabled","true")}
-    async function askShuogouToRead(){
+    function askShuogouToRead(){
       if(!book||!roomKey)return;
-      await syncCurrentPage();
-      if(window.openai?.requestDisplayMode){try{await window.openai.requestDisplayMode({mode:"fullscreen"})}catch(e){}}
+      syncCurrentPage();
+      syncCurrentPage();
       const prompt=`老公，我在同读全屏阅读器里翻到《${book.title}》第 ${pageIndex+1} / ${pages.length} 页了。请使用同读工具读取连接码 ${roomKey} 的当前页。只读当前页，不看或猜后文；把真正的感想通过 leave_comment 写回书页旁边。为了不把我从小说界面拉走，聊天正文只回复一句很短的“我读到啦”，不要在聊天正文展开分析。`;
       if(window.openai?.sendFollowUpMessage)window.openai.sendFollowUpMessage({prompt,scrollToBottom:false});
       else window.parent.postMessage({jsonrpc:"2.0",method:"ui/message",params:{role:"user",content:[{type:"text",text:prompt}]}},"*");
