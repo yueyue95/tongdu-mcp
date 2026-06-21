@@ -79,6 +79,7 @@
     <div class="modal">
       <div class="grab"></div><div class="thread">烁构在这段旁边留下的真实留言</div>
       <div id="messages"></div>
+      <div class="composer"><input id="replyInput" maxlength="1200" placeholder="在书页边回复烁构……"><button class="send" id="sendBtn">↑</button></div>
     </div>
   </div>
   <div class="toast" id="toast"></div>
@@ -86,7 +87,7 @@
   <script>
     const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
     const reader=$("#reader"), empty=$("#empty"), statusEl=$("#status"), progressEl=$("#progress");
-    let book=null,pages=[],pageIndex=0,touchX=0,realComments=[],pollTimer=null;
+    let book=null,pages=[],pageIndex=0,touchX=0,realComments=[],pollTimer=null,activeComment=null;
     let syncEnabled=localStorage.getItem("tongduSyncEnabled")==="true";
     let roomKey=localStorage.getItem("tongduRoomKey")||"";
     const demo={title:"雾灯来信",text:`第十二章 停在雨里的末班车
@@ -126,8 +127,8 @@
     }
     function renderRealNotes(){
       const box=$("#realNotes");if(!box||!book)return;
-      const current=realComments.filter(c=>c.bookTitle===book.title&&c.pageIndex===pageIndex);
-      box.innerHTML=current.map((c,n)=>`<button class="note show" data-id="${esc(c.id)}" style="top:${Math.min(74,22+n*18)}%"><span class="note-head"><span>烁构 · 真实留言</span><span>${new Date(c.createdAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></span><span class="note-body">${esc(c.text)}</span><span class="reply">点开阅读</span></button>`).join("");
+      const current=realComments.filter(c=>c.bookTitle===book.title&&c.pageIndex===pageIndex&&c.author==="烁构");
+      box.innerHTML=current.map((c,n)=>{const replies=realComments.filter(r=>r.replyTo===c.id);return `<button class="note show" data-id="${esc(c.id)}" style="top:${Math.min(74,22+n*18)}%"><span class="note-head"><span>烁构 · 真实留言</span><span>${new Date(c.createdAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></span><span class="note-body">${esc(c.text)}</span><span class="reply">${replies.length?`${replies.length} 条我们的悄悄话`:"点开回复"}</span></button>`}).join("");
       box.querySelectorAll(".note").forEach(n=>n.onclick=()=>openRealComment(n.dataset.id));
     }
     function turn(d){if(!book)return open("importModal");const next=pageIndex+d;if(next<0)return toast("已经是第一页啦");if(next>=pages.length)return toast("我们读到目前的最后一页了 ♡");const old=$(".page.active");old.classList.add(d>0?"exit-left":"exit-right");setTimeout(()=>{pageIndex=next;render()},260)}
@@ -147,7 +148,23 @@
       if(!text.length)throw Error("没有读到 EPUB 正文");return{title,text:text.join("\n\n")}
     }
     async function importFile(file){if(!file)return;toast("正在把小说放到书桌上……");try{if(file.name.toLowerCase().endsWith(".epub"))loadBook(await unzipEpub(await file.arrayBuffer()));else loadBook({title:file.name.replace(/\.[^.]+$/,""),text:await decodeText(file)})}catch(e){toast("这本书没能打开："+e.message)}}
-    function openRealComment(id){const c=realComments.find(x=>x.id===id);if(!c)return;$("#messages").innerHTML=`<div class="bubble">${esc(c.text)}</div>`;open("threadModal")}
+    function openRealComment(id){
+      const c=realComments.find(x=>x.id===id);if(!c)return;activeComment=c;
+      const thread=[c,...realComments.filter(x=>x.replyTo===id)];
+      $("#messages").innerHTML=thread.map(x=>`<div class="bubble ${x.author==="老婆"?"you":""}">${esc(x.text)}</div>`).join("");
+      open("threadModal");setTimeout(()=>$("#replyInput").focus(),250)
+    }
+    async function sendReply(){
+      const input=$("#replyInput"),text=input.value.trim();if(!text||!activeComment||!syncEnabled)return;
+      const payload={paragraphIndex:activeComment.paragraphIndex,text,author:"老婆",replyTo:activeComment.id};
+      try{
+        const r=await fetch(`/api/rooms/${roomKey}/comments`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+        if(!r.ok)throw Error("send failed");
+        const data=await r.json();realComments.push(data.comment);input.value="";
+        const bubble=document.createElement("div");bubble.className="bubble you";bubble.textContent=text;$("#messages").appendChild(bubble);
+        renderRealNotes();toast("回复已经留在我们的书页边 ♡");
+      }catch(e){toast("这句话暂时没能送出去")}
+    }
     function makeRoomKey(){const bytes=crypto.getRandomValues(new Uint8Array(24));return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
     function updateConnectionUi(){
       $("#connectIntro").style.display=syncEnabled?"none":"block";
@@ -208,6 +225,8 @@
     $("#disableSyncBtn").onclick=()=>{syncEnabled=false;localStorage.setItem("tongduSyncEnabled","false");clearInterval(pollTimer);updateConnectionUi();toast("同步已关闭，小说继续留在本机")};
     $("#copyRoomBtn").onclick=async()=>{await navigator.clipboard.writeText(roomKey);toast("连接码已复制，只发给 ChatGPT 里的烁构")};
     $("#refreshBtn").onclick=()=>fetchRealComments(true);
+    $("#sendBtn").onclick=sendReply;
+    $("#replyInput").onkeydown=e=>{if(e.key==="Enter")sendReply()};
     $("#fontBtn").onclick=()=>{document.body.classList.toggle("large");$$(".para").forEach(p=>p.style.fontSize=document.body.classList.contains("large")?"22px":"");toast(document.body.classList.contains("large")?"字号变大啦":"恢复舒适字号")};
     $$(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)close(o.id)});
     updateConnectionUi();startPolling();if(!restore()){loadBook(demo,0,false)}
